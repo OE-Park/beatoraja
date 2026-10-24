@@ -36,7 +36,7 @@ Rows marked "was" show upstream 83574048. Re-check with `mise run probe`.
 | gdx 1.14.2 (`gdx-platform` natives-desktop) | x86_64, arm64 | OK | was gdx 1.9.9: i386, x86_64, FAIL |
 | gdx-backend-lwjgl3 1.14.2 + LWJGL 3.3.3 (lwjgl, glfw, opengl, openal, jemalloc, stb) | x86_64, arm64 | OK | was LWJGL 2 (`gdx-backend-lwjgl`): x86_64 only, FAIL. macOS uses GL 3.2 core + GLSL 150 prepend (`MacOSSupport`) |
 | gdx-freetype 1.14.2 (`gdx-freetype-platform`) | x86_64, arm64 | OK | was i386, x86_64, FAIL |
-| gdx-controllers 2.2.4 + jamepad 2.26.5.0 | x86_64, arm64 | OK | was `gdx-controllers-desktop` (OIS): i386, x86_64, FAIL. Loads optional `gamecontrollerdb.txt` from working directory; HAT input stubbed (`isHatPressed`) |
+| gdx-controllers 2.2.4 + jamepad 2.26.5.0 | x86_64, arm64 | OK | was `gdx-controllers-desktop` (OIS): i386, x86_64, FAIL. Loads optional `gamecontrollerdb.txt` from working directory; HAT input stubbed (`isHatPressed`); see Behaviour changes |
 | sqlite-jdbc 3.53.4.0 | x86_64, aarch64 | OK | was 3.18: x86_64, FAIL |
 | javacv/ffmpeg (JavaCV 1.5.9, FFmpeg 6.0) | x86_64, arm64 | OK | was JavaCPP 1.3.3: x86_64, FAIL |
 | JNA 5.13.0 | x86_64, aarch64 | OK | added before java-discord-rpc. discord-rpc's own native is still x86_64, so Discord RPC init is caught and logged (`Discord RPC unavailable`) |
@@ -44,6 +44,36 @@ Rows marked "was" show upstream 83574048. Re-check with `mise run probe`.
 | JavaFX (launcher) | JDK-provided | OK | - |
 
 JNA is also used directly by `audio/PortAudioAsioDiagnostics.java` (Windows ASIO path).
+
+## Running (end users)
+
+`beatoraja-config.command` runs bare `java`, so an arm64 JDK 17 that bundles JavaFX
+(e.g. Liberica Full / "javafx" build) must be first on `PATH`.
+
+## Behaviour changes on Windows/Linux
+
+These apply on every OS, not only macOS (libGDX 1.14.2 / LWJGL3 / gdx-controllers 2.x).
+
+- Controllers (gdx-controllers 2.x / Jamepad): only the 21 SDL GameController buttons and 6 axes are exposed.
+  Old OIS raw indices `BUTTON_1..28` now map to SDL buttons (A/B/X/...) or nothing, so existing bindings
+  (default `BUTTON_2..10`) must be re-assigned. Axes 6-7 are unreachable. Devices without an SDL mapping are
+  not listed; use `gamecontrollerdb.txt`. The file is loaded after the manager has already opened devices at
+  startup, so it may only take effect after replugging the device (untested). `SDL_GAMECONTROLLERCONFIG`
+  is the alternative.
+- HAT bindings: `BMControllerInputProcessor.isHatPressed` is a stub returning false (to be implemented),
+  so HAT bindings are dead on every OS until then.
+- Controller refresh: on macOS the state is refreshed once per rendered frame (SDL updates stay on the render
+  thread). On other OS the poll-thread interception still runs the Jamepad monitor at the poll rate.
+- Numpad keys: LWJGL3 reports KP_ENTER/ADD/SUBTRACT/MULTIPLY/DIVIDE/DECIMAL as NUMPAD_* keys instead of
+  ENTER/PLUS/MINUS/STAR/SLASH/PERIOD (LWJGL2 aliasing). Numpad Enter no longer acts as Enter, and saved
+  bindings relying on the aliasing need re-assigning.
+- Launcher: Play hides the launcher window. The game loop runs on the JavaFX thread on every OS (GLFW
+  main-thread rule) and JavaFX implicit exit is turned off at that point. The process exits via
+  `System.exit` (0 on success, 1 on failure; was -1 with LWJGL2's forceExit). A Windows x64 smoke
+  (direct `-s` and launcher Play) is required before releasing to Windows/Linux users.
+- Mouse cursor in play: hidden and locked with `setCursorCatched` after 5 s without movement
+  (no `isInsideWindow` check).
+- FFmpeg 6.0 macosx-x86_64 natives need macOS 11+, so Intel Macs on 10.10-10.15 lose BGA video.
 
 ## Known pitfalls from upstream history
 
