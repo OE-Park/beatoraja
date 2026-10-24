@@ -1,0 +1,2 @@
+# Maven Central coordinates fetched by fetch-libs.sh into lib/.
+# Format: group:artifact:version[:classifier]   (# comments and blank lines ignored)

@@ -1,0 +1,24 @@
+# macOS arm64 development toolchain.
+# Liberica "javafx" builds bundle JavaFX modules in the JDK image, so the
+# launcher (javafx.application.Application) runs with plain `java -jar`
+# and ant can compile src/bms/player/beatoraja/launcher without -lib.
+[tools]
+java = "liberica-javafx-17.0.21+11"
+ant = "1.10.18"
+
+[tasks.build]
+description = "Build build/beatoraja.jar"
+run = "ant create_run_jar"
+
+[tasks.probe]
+description = "Check which bundled native libraries load on this JVM/arch"
+depends = ["build"]
+run = """
+javac -cp build/beatoraja.jar -d build/probe tools/macos-arm64/NativeProbe.java
+java -Djava.library.path=./natives -cp build/beatoraja.jar:build/probe NativeProbe
+"""
+
+[tasks.run]
+description = "Run beatoraja from the repo root (same flags as beatoraja-config.command)"
+depends = ["build"]
+run = "java -Xms1g -Xmx4g -Djava.library.path=./natives -jar build/beatoraja.jar"
