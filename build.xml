@@ -51,7 +51,7 @@
 			<zipfileset excludes="META-INF/*.SF" src="./lib/gdx-freetype.jar" />
 			<zipfileset excludes="META-INF/*.SF" src="./lib/gdx-natives.jar" />
 			<zipfileset excludes="META-INF/*.SF" src="./lib/gdx.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="./lib/sqlite-jdbc.jar" />
+			<zipfileset excludes="META-INF/*.SF" src="./lib/sqlite-jdbc-3.53.4.0.jar" />
 			<zipfileset excludes="META-INF/*.SF" src="./lib/jbms-parser.jar" />
 			<zipfileset excludes="META-INF/*.SF" src="./lib/commons-dbutils.jar" />
 			<zipfileset excludes="META-INF/*.SF" src="./lib/jbmstable-parser.jar" />
