@@ -1,5 +1,6 @@
 FROM eclipse-temurin:17-jdk
 
+ARG TARGETARCH
 ENV OPENJFX_VERSION 21.0.11
 ENV ANT_VERSION 1.10.17
 
@@ -9,8 +10,13 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-RUN cd /tmp && \
-    curl -fsSL -o openjfx.zip https://download2.gluonhq.com/openjfx/${OPENJFX_VERSION}/openjfx-${OPENJFX_VERSION}_linux-x64_bin-sdk.zip && \
+RUN case "${TARGETARCH:-amd64}" in \
+        amd64) OPENJFX_ARCH=x64 ;; \
+        arm64) OPENJFX_ARCH=aarch64 ;; \
+        *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac && \
+    cd /tmp && \
+    curl -fsSL -o openjfx.zip https://download2.gluonhq.com/openjfx/${OPENJFX_VERSION}/openjfx-${OPENJFX_VERSION}_linux-${OPENJFX_ARCH}_bin-sdk.zip && \
     unzip openjfx.zip && \
     mv javafx-sdk-${OPENJFX_VERSION} /opt/openjfx && \
     rm openjfx.zip
