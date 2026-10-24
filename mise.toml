@@ -14,11 +14,11 @@ run = "ant create_run_jar"
 description = "Check which bundled native libraries load on this JVM/arch"
 depends = ["build"]
 run = """
-javac -cp build/beatoraja.jar -d build/probe tools/macos-arm64/NativeProbe.java
-java -Djava.library.path=./natives -cp build/beatoraja.jar:build/probe NativeProbe
+"$JAVA_HOME/bin/javac" -cp build/beatoraja.jar -d build/probe tools/macos-arm64/NativeProbe.java
+"$JAVA_HOME/bin/java" -Djava.library.path=./natives -cp build/beatoraja.jar:build/probe NativeProbe
 """
 
 [tasks.run]
 description = "Run beatoraja from the repo root (same flags as beatoraja-config.command)"
 depends = ["build"]
-run = "java -Xms1g -Xmx4g -Djava.library.path=./natives -jar build/beatoraja.jar"
+run = "\"$JAVA_HOME/bin/java\" -Xms1g -Xmx4g -Djava.library.path=./natives -jar build/beatoraja.jar"
