@@ -702,7 +702,7 @@ public class PlayConfigurationView implements Initializable {
 
 		// LWJGL3 game loop blocks the JavaFX application thread until the game exits
 		// the game loop pumps native events on this thread; with implicit exit the toolkit could shut down mid-game
-		// (the process ends via System.exit in MainLoader.play with forceExit=true)
+		// (MainLoader.play with forceExit=true ends the process via System.exit on success and on failure)
 		javafx.application.Platform.setImplicitExit(false);
 		controlPanel.getScene().getWindow().hide();
 		MainLoader.play(null, bms.player.beatoraja.BMSPlayerMode.PLAY, true, config, player, songUpdated);

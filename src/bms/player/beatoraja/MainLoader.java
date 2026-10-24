@@ -164,6 +164,9 @@ public class MainLoader extends Application {
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 			Logger.getGlobal().severe("楽曲データベース初期化中の例外:" + e.getMessage());
+			if (forceExit) {
+				System.exit(1);
+			}
 			return;
 		}
 		if(illegalSongs.size() > 0) {
@@ -282,6 +285,9 @@ public class MainLoader extends Application {
 		} catch (Throwable e) {
 			e.printStackTrace();
 			Logger.getGlobal().severe(e.getClass().getName() + " : " + e.getMessage());
+			if (forceExit) {
+				System.exit(1);
+			}
 		}
 	}
 
