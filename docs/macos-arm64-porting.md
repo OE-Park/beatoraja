@@ -36,7 +36,7 @@ Rows marked "was" show upstream 83574048. Re-check with `mise run probe`.
 | gdx 1.14.2 (`gdx-platform` natives-desktop) | x86_64, arm64 | OK | was gdx 1.9.9: i386, x86_64, FAIL |
 | gdx-backend-lwjgl3 1.14.2 + LWJGL 3.3.3 (lwjgl, glfw, opengl, openal, jemalloc, stb) | x86_64, arm64 | OK | was LWJGL 2 (`gdx-backend-lwjgl`): x86_64 only, FAIL. macOS uses GL 3.2 core + GLSL 150 prepend (`MacOSSupport`) |
 | gdx-freetype 1.14.2 (`gdx-freetype-platform`) | x86_64, arm64 | OK | was i386, x86_64, FAIL |
-| gdx-controllers 2.2.4 + jamepad 2.26.5.0 | x86_64, arm64 | OK | was `gdx-controllers-desktop` (OIS): i386, x86_64, FAIL. Loads optional `gamecontrollerdb.txt` from working directory; HAT input stubbed (`isHatPressed`); see Behaviour changes |
+| gdx-controllers 2.2.4 + jamepad 2.26.5.0 | x86_64, arm64 | OK | was `gdx-controllers-desktop` (OIS): i386, x86_64, FAIL. Loads optional `gamecontrollerdb.txt` from working directory; HAT read from the SDL d-pad; see Behaviour changes |
 | sqlite-jdbc 3.53.4.0 | x86_64, aarch64 | OK | was 3.18: x86_64, FAIL |
 | javacv/ffmpeg (JavaCV 1.5.9, FFmpeg 6.0) | x86_64, arm64 | OK | was JavaCPP 1.3.3: x86_64, FAIL |
 | JNA 5.13.0 | x86_64, aarch64 | OK | added before java-discord-rpc. discord-rpc's own native is still x86_64, so Discord RPC init is caught and logged (`Discord RPC unavailable`) |
@@ -60,8 +60,9 @@ These apply on every OS, not only macOS (libGDX 1.14.2 / LWJGL3 / gdx-controller
   not listed; use `gamecontrollerdb.txt`. The file is loaded after the manager has already opened devices at
   startup, so it may only take effect after replugging the device (untested). `SDL_GAMECONTROLLERCONFIG`
   is the alternative.
-- HAT bindings: `BMControllerInputProcessor.isHatPressed` is a stub returning false (to be implemented),
-  so HAT bindings are dead on every OS until then.
+- HAT bindings: gdx-controllers 2.x has no POV API, so `HAT 1 LEFT/TOP/RIGHT/BOTTOM` read the SDL d-pad
+  buttons from `Controller.getMapping()`. Diagonals press two directions, as before. The same d-pad also
+  reports as `BUTTON 12..15` (SDL button codes 11-14), so either binding works. Only one HAT exists.
 - Controller refresh: on macOS the state is refreshed once per rendered frame (SDL updates stay on the render
   thread). On other OS the poll-thread interception still runs the Jamepad monitor at the poll rate.
 - Numpad keys: LWJGL3 reports KP_ENTER/ADD/SUBTRACT/MULTIPLY/DIVIDE/DECIMAL as NUMPAD_* keys instead of

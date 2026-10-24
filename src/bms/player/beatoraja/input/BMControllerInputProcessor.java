@@ -5,6 +5,7 @@ import java.util.Arrays;
 
 import bms.player.beatoraja.PlayModeConfig.ControllerConfig;
 import com.badlogic.gdx.controllers.Controller;
+import com.badlogic.gdx.controllers.ControllerMapping;
 
 /**
  * 専用コントローラー入力処理用クラス
@@ -192,9 +193,39 @@ public class BMControllerInputProcessor extends BMSPlayerInputDevice {
         }
 	}
 
+	/**
+	 * HAT入力。gdx-controllers 2.x には POV が無いため、SDL マッピングの十字キーボタンで代用する。
+	 * 斜め入力は SDL が十字キー2ボタン同時押しとして報告する。
+	 *
+	 * @param hat HAT番号 (SDL の十字キーは1つのみ)
+	 * @param direction 0=左, 1=上, 2=右, 3=下
+	 */
 	private boolean isHatPressed(int hat, int direction) {
-		// TODO(user): map via controller.getMapping() dpad buttons
-		return false;
+		if (hat != 0) {
+			return false;
+		}
+		final ControllerMapping mapping = controller.getMapping();
+		if (mapping == null) {
+			return false;
+		}
+		final int code;
+		switch (direction) {
+			case 0:
+				code = mapping.buttonDpadLeft;
+				break;
+			case 1:
+				code = mapping.buttonDpadUp;
+				break;
+			case 2:
+				code = mapping.buttonDpadRight;
+				break;
+			case 3:
+				code = mapping.buttonDpadDown;
+				break;
+			default:
+				return false;
+		}
+		return code != ControllerMapping.UNDEFINED && controller.getButton(code);
 	}
 
     private float getAnalogValue(int button) {
