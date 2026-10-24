@@ -45,8 +45,9 @@
 			</manifest>
 			<fileset dir="${build.dest}" />
 			<fileset excludes="**/*.java" dir="${build.src}" />
-			<zipfileset excludes="META-INF/*.SF" src="./lib/gdx-controllers-desktop-natives.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="./lib/gdx-controllers-desktop.jar" />
+			<zipfileset excludes="META-INF/*.SF" src="./lib/gdx-controllers-core-2.2.4.jar" />
+			<zipfileset excludes="META-INF/*.SF" src="./lib/gdx-controllers-desktop-2.2.4.jar" />
+			<zipfileset excludes="META-INF/*.SF,jamepad.dll,libjamepad.so,libjamepadarm.so,libjamepadarm64.so" src="./lib/jamepad-2.26.5.0.jar" />
 			<!-- libGDX 1.14.2 + LWJGL 3.3.3. 32-bit / arm / riscv desktop natives are not bundled. -->
 			<zipfileset excludes="META-INF/*.SF" src="./lib/gdx-1.14.2.jar" />
 			<zipfileset excludes="META-INF/*.SF,gdx.dll,libgdxarm.so,libgdxarm64.so,libgdxriscv64.so" src="./lib/gdx-platform-1.14.2-natives-desktop.jar" />
@@ -73,7 +74,6 @@
 			<zipfileset excludes="META-INF/*.SF" src="./lib/ffmpeg-6.0-1.5.9-windows-x86_64.jar" />
 			<zipfileset excludes="META-INF/*.SF" src="./lib/ffmpeg-6.0-1.5.9-linux-x86_64.jar" />
 			<zipfileset excludes="META-INF/*.SF" src="./lib/javacv-1.5.9.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="./lib/gdx-controllers.jar" />
 			<zipfileset excludes="META-INF/*.SF" src="./lib/twitter4j-core-4.0.4.jar" />
 			<zipfileset excludes="META-INF/*.SF" src="./lib/jflac-codec-1.5.3.jar" />
 			<zipfileset excludes="META-INF/*.SF" src="./lib/luaj-jse-3.0.2-custom.jar" />

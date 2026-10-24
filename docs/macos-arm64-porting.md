@@ -8,7 +8,9 @@ Status of running beatoraja natively on an arm64 JVM. Upstream: `exch-bms2/beato
 - Remote `upstream` = `exch-bms2/beatoraja`. Sync with `git fetch upstream && git merge upstream/master`.
   The personal fork is added later as `origin`.
 - Verify with keyboard first. Controller check (PHOENIXWAN IIDX) is a later manual step;
-  in PR #730, PHOENIXWAN 2018-2021 needed an SDL mapping (`SDL_GAMECONTROLLERCONFIG`).
+  in PR #730, PHOENIXWAN 2018-2021 needed an SDL mapping (`SDL_GAMECONTROLLERCONFIG` or a
+  `gamecontrollerdb.txt` file in the working directory, which `BMSPlayerInputProcessor` loads via
+  `JamepadControllerManager.addMappingsFromFile`).
 
 ## Toolchain
 
@@ -34,7 +36,7 @@ Rows marked "was" show upstream 83574048. Re-check with `mise run probe`.
 | gdx 1.14.2 (`gdx-platform` natives-desktop) | x86_64, arm64 | OK | was gdx 1.9.9: i386, x86_64, FAIL |
 | gdx-backend-lwjgl3 1.14.2 + LWJGL 3.3.3 (lwjgl, glfw, opengl, openal, jemalloc, stb) | x86_64, arm64 | OK | was LWJGL 2 (`gdx-backend-lwjgl`): x86_64 only, FAIL. macOS uses GL 3.2 core + GLSL 150 prepend (`MacOSSupport`) |
 | gdx-freetype 1.14.2 (`gdx-freetype-platform`) | x86_64, arm64 | OK | was i386, x86_64, FAIL |
-| gdx-controllers-desktop (OIS) | i386, x86_64 | FAIL | gdx-controllers 2.x (SDL via jamepad), Task 6. The old `Controllers` class looks for `Lwjgl3ControllerManager` and fails game startup until then |
+| gdx-controllers 2.2.4 + jamepad 2.26.5.0 | x86_64, arm64 | OK | was `gdx-controllers-desktop` (OIS): i386, x86_64, FAIL. Loads optional `gamecontrollerdb.txt` from working directory; HAT input stubbed (`isHatPressed`) |
 | sqlite-jdbc 3.53.4.0 | x86_64, aarch64 | OK | was 3.18: x86_64, FAIL |
 | javacv/ffmpeg (JavaCV 1.5.9, FFmpeg 6.0) | x86_64, arm64 | OK | was JavaCPP 1.3.3: x86_64, FAIL |
 | JNA 5.13.0 | x86_64, aarch64 | OK | added before java-discord-rpc. discord-rpc's own native is still x86_64, so Discord RPC init is caught and logged (`Discord RPC unavailable`) |

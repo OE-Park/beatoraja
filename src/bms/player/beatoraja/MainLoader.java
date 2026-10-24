@@ -246,27 +246,30 @@ public class MainLoader extends Application {
 					main.create();
 				}
 			}, cfg) {
-				// This is some kind of hack. Refer to com.badlogic.gdx.controllers.desktop.OisControllers code.
-				// OisControllers creates a runnable that polls the controller input. It polls the input every frame via
+				// This is some kind of hack. Refer to com.badlogic.gdx.controllers.desktop.support.JamepadControllerMonitor code.
+				// JamepadControllerMonitor creates a runnable that polls the controller input. It polls the input every frame via
 				// `Gdx.app.postRunnable` function.
 				//
 				// We want it to poll the input on every poll thread's interval. Be it 1000Hz or 8000Hz.
 				// To achieve that, we *intercept* the runnable, store it somewhere else, and call that runnable
 				// directly on the polling thread. (BMSPlayerInputProcessor.poll). Further postRunnable for that
 				// runnable will be prohibited.
-				private Runnable oisRunnable = null;
+				// On macOS, SDL joystick calls must stay on the thread that initialised SDL (the render/main thread).
+				private Runnable jamepadRunnable = null;
 				@Override
 				public void postRunnable(Runnable runnable) {
-					if (oisRunnable == null) {
-						StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-						if (stackTrace.length >= 3) {
-							if (stackTrace[2].getClassName().startsWith("com.badlogic.gdx.controllers.desktop.OisControllers")) {
-								oisRunnable = runnable;
-								BMSPlayerInputProcessor.controllerPollRunner = runnable;
+					if (!MacOSSupport.isMacOS()) {
+						if (jamepadRunnable == null) {
+							StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+							if (stackTrace.length >= 3) {
+								if (stackTrace[2].getClassName().startsWith("com.badlogic.gdx.controllers.desktop.support.JamepadControllerMonitor")) {
+									jamepadRunnable = runnable;
+									BMSPlayerInputProcessor.controllerPollRunner = runnable;
+								}
 							}
 						}
+						else if (runnable == jamepadRunnable) return;
 					}
-					else if (runnable == oisRunnable) return;
 
 					super.postRunnable(runnable);
 				}

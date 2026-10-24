@@ -5,7 +5,6 @@ import java.util.Arrays;
 
 import bms.player.beatoraja.PlayModeConfig.ControllerConfig;
 import com.badlogic.gdx.controllers.Controller;
-import com.badlogic.gdx.controllers.PovDirection;
 
 /**
  * 専用コントローラー入力処理用クラス
@@ -138,21 +137,7 @@ public class BMControllerInputProcessor extends BMSPlayerInputDevice {
 				if (button <= BMKeys.BUTTON_28) {
 					buttonstate[button] = controller.getButton(button);
 				} else if (button <= BMKeys.HAT1_BOTTOM){
-					PovDirection pov = controller.getPov((button - BMKeys.HAT1_LEFT) / 4);
-					switch ((button - BMKeys.HAT1_LEFT) % 4) {
-						case 0:  // Left
-							buttonstate[button] = (pov == PovDirection.west || pov == PovDirection.northWest || pov == PovDirection.southWest);
-							break;
-						case 1:  // Top
-							buttonstate[button] = (pov == PovDirection.north || pov == PovDirection.northEast || pov == PovDirection.northWest);
-							break;
-						case 2:  // Right
-							buttonstate[button] = (pov == PovDirection.east || pov == PovDirection.northEast || pov == PovDirection.southEast);
-							break;
-						case 3:  // bottom
-							buttonstate[button] = (pov == PovDirection.south || pov == PovDirection.southEast || pov == PovDirection.southWest);
-							break;
-					}
+					buttonstate[button] = isHatPressed((button - BMKeys.HAT1_LEFT) / 4, (button - BMKeys.HAT1_LEFT) % 4);
                     buttonstate[button] |= controller.getButton(button);
 				} else {
 					if (jkoc) {
@@ -205,6 +190,11 @@ public class BMControllerInputProcessor extends BMSPlayerInputDevice {
                 this.bmsPlayerInputProcessor.setAnalogState(i, false, 0);
             }
         }
+	}
+
+	private boolean isHatPressed(int hat, int direction) {
+		// TODO(user): map via controller.getMapping() dpad buttons
+		return false;
 	}
 
     private float getAnalogValue(int button) {

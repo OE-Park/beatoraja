@@ -51,3 +51,6 @@ org.lwjgl:lwjgl-stb:3.3.3:natives-macos
 org.lwjgl:lwjgl-stb:3.3.3:natives-macos-arm64
 org.lwjgl:lwjgl-stb:3.3.3:natives-windows
 org.lwjgl:lwjgl-stb:3.3.3:natives-linux
+com.badlogicgames.gdx-controllers:gdx-controllers-core:2.2.4
+com.badlogicgames.gdx-controllers:gdx-controllers-desktop:2.2.4
+com.badlogicgames.jamepad:jamepad:2.26.5.0
