@@ -257,7 +257,7 @@ public class MainLoader extends Application {
 				// To achieve that, we *intercept* the runnable, store it somewhere else, and call that runnable
 				// directly on the polling thread. (BMSPlayerInputProcessor.poll). Further postRunnable for that
 				// runnable will be prohibited.
-				// On macOS, SDL joystick calls must stay on the thread that initialised SDL (the render/main thread).
+				// On macOS, SDL device updates (the Jamepad monitor's update) must stay on the thread that initialised SDL (the render/main thread).
 				private Runnable jamepadRunnable = null;
 				@Override
 				public void postRunnable(Runnable runnable) {
