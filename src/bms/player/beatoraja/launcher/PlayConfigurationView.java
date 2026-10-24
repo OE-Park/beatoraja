@@ -700,6 +700,8 @@ public class PlayConfigurationView implements Initializable {
 		streamTab.setDisable(true);
 		controlPanel.setDisable(true);
 
+		// LWJGL3 game loop blocks the JavaFX application thread until the game exits
+		controlPanel.getScene().getWindow().hide();
 		MainLoader.play(null, bms.player.beatoraja.BMSPlayerMode.PLAY, true, config, player, songUpdated);
 	}
 

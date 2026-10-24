@@ -20,7 +20,10 @@ public class NativeProbe {
     public static void main(String[] a) {
         System.out.println("os.arch=" + System.getProperty("os.arch"));
         probe("gdx core natives", () -> { com.badlogic.gdx.utils.GdxNativesLoader.load(); return null; });
-        probe("lwjgl2 (gdx-backend-lwjgl)", () -> { com.badlogic.gdx.backends.lwjgl.LwjglNativesLoader.load(); return org.lwjgl.Sys.getVersion(); });
+        probe("lwjgl3 core", () -> { org.lwjgl.system.Library.initialize(); return org.lwjgl.Version.getVersion(); });
+        probe("glfw", () -> org.lwjgl.glfw.GLFW.glfwGetVersionString());
+        // ALC auto-creates in its static initializer unless explicit init is requested
+        probe("openal", () -> { org.lwjgl.system.Configuration.OPENAL_EXPLICIT_INIT.set(true); org.lwjgl.openal.ALC.create(); return null; });
         probe("gdx-freetype", () -> { new com.badlogic.gdx.utils.SharedLibraryLoader().load("gdx-freetype"); return null; });
         probe("gdx-controllers-desktop", () -> { new com.badlogic.gdx.utils.SharedLibraryLoader().load("gdx-controllers-desktop"); return null; });
         probe("sqlite-jdbc", () -> java.sql.DriverManager.getConnection("jdbc:sqlite::memory:").getMetaData().getDriverVersion());

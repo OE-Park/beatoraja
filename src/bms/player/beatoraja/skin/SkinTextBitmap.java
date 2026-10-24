@@ -271,8 +271,10 @@ public final class SkinTextBitmap extends SkinText {
 	}
 
 	private void applyColor(GlyphLayout target, Color color) {
-		for (GlyphRun run : target.runs) {
-			run.color.set(color);
+		// GlyphLayout.colors holds (glyph index, ABGR8888 color) pairs
+		final int bits = color.toIntBits();
+		for (int i = 1; i < target.colors.size; i += 2) {
+			target.colors.set(i, bits);
 		}
 	}
 

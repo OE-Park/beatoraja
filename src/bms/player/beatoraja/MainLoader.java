@@ -32,8 +32,8 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.layout.VBox;
 
-import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
-import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 
 import bms.player.beatoraja.AudioConfig.DriverType;
 import bms.player.beatoraja.ir.IRConnection;
@@ -111,7 +111,19 @@ public class MainLoader extends Application {
 
 		if (Files.exists(Config.configpath) && (bmsPath != null || auto != null)) {
 			IRConnectionManager.getAllAvailableIRConnectionName();
-			play(bmsPath, auto, true, null, null, bmsPath != null);
+			final BMSPlayerMode mode = auto;
+			if (MacOSSupport.isMacOS()) {
+				// GLFW must run on the AppKit main thread, which is the JavaFX application thread on macOS
+				final Runnable game = () -> play(bmsPath, mode, true, null, null, bmsPath != null);
+				try {
+					javafx.application.Platform.startup(game);
+				} catch (IllegalStateException e) {
+					// The java launcher has already started the JavaFX toolkit (MainLoader extends Application)
+					javafx.application.Platform.runLater(game);
+				}
+			} else {
+				play(bmsPath, mode, true, null, null, bmsPath != null);
+			}
 		} else {
 			launch(args);
 		}
@@ -162,43 +174,53 @@ public class MainLoader extends Application {
 		try {
 			final MainController main = new MainController(f, config, player, auto, songUpdated, songdb);
 
-			LwjglApplicationConfiguration cfg = new LwjglApplicationConfiguration();
-			cfg.width = config.getResolution().width;
-			cfg.height = config.getResolution().height;
+			Lwjgl3ApplicationConfiguration cfg = new Lwjgl3ApplicationConfiguration();
+			final int w = config.getResolution().width;
+			final int h = config.getResolution().height;
 
 			// fullscreen
 			switch (config.getDisplaymode()) {
 				case FULLSCREEN:
-					cfg.fullscreen = true;
+					Graphics.DisplayMode d = null;
+					for (Graphics.DisplayMode display : Lwjgl3ApplicationConfiguration.getDisplayModes()) {
+						if (display.width == w && display.height == h
+								&& (d == null || (d.refreshRate <= display.refreshRate && d.bitsPerPixel <= display.bitsPerPixel))) {
+							d = display;
+						}
+					}
+					if (d != null) {
+						cfg.setFullscreenMode(d);
+					} else {
+						cfg.setWindowedMode(w, h);
+					}
 					break;
 				case BORDERLESS:
-					System.setProperty("org.lwjgl.opengl.Window.undecorated", "true");
-					cfg.fullscreen = false;
+					cfg.setDecorated(false);
+					cfg.setWindowedMode(w, h);
 					break;
 				case WINDOW:
-					cfg.fullscreen = false;
+					cfg.setWindowedMode(w, h);
 					break;
 			}
 			// vSync
-			cfg.vSyncEnabled = config.isVsync();
-			cfg.backgroundFPS = config.getMaxFramePerSecond();
-			cfg.foregroundFPS = config.getMaxFramePerSecond();
-			cfg.title = MainController.getVersion();
+			cfg.useVsync(config.isVsync());
+			cfg.setIdleFPS(config.getMaxFramePerSecond());
+			cfg.setForegroundFPS(config.getMaxFramePerSecond());
+			cfg.setTitle(MainController.getVersion());
 
+			final int audioDeviceBufferSize;
 			if(config.getAudioConfig().getDriver() == DriverType.AudioDevice) {
-				cfg.audioDeviceBufferSize = Math.max(config.getAudioConfig().getDeviceBufferSize() * 2 * 2, 4096);
+				audioDeviceBufferSize = Math.max(config.getAudioConfig().getDeviceBufferSize() * 2 * 2, 4096);
 			} else {
-				cfg.audioDeviceBufferSize = config.getAudioConfig().getDeviceBufferSize();
+				audioDeviceBufferSize = config.getAudioConfig().getDeviceBufferSize();
 			}
-			cfg.audioDeviceSimultaneousSources = config.getAudioConfig().getDeviceSimultaneousSources();
-			cfg.forceExit = forceExit;
+			cfg.setAudioConfig(config.getAudioConfig().getDeviceSimultaneousSources(), audioDeviceBufferSize, 9);
 			if(config.getAudioConfig().getDriver() == DriverType.PortAudio) {
-				LwjglApplicationConfiguration.disableAudio = true;
+				cfg.disableAudio(true);
 			}
-			// System.setProperty("org.lwjgl.opengl.Display.allowSoftwareOpenGL",
-			// "true");
+			MacOSSupport.configure(cfg);
 
-			new LwjglApplication(new ApplicationListener() {
+			new Lwjgl3Application(new ApplicationListener() {
 				
 				public void resume() {
 					main.resume();
@@ -249,38 +271,11 @@ public class MainLoader extends Application {
 					super.postRunnable(runnable);
 				}
 			};
+			// Lwjgl3Application blocks until the game loop exits
+			if (forceExit) {
+				System.exit(0);
+			}
 
-//			Lwjgl3ApplicationConfiguration cfg = new Lwjgl3ApplicationConfiguration();
-//
-//			final int w = (int) RESOLUTION[config.getResolution()].width;
-//			final int h = (int) RESOLUTION[config.getResolution()].height;
-//			if (config.isFullscreen()) {
-//				DisplayMode d = null;
-//				for (DisplayMode display : cfg.getDisplayModes()) {
-//					System.out.println("available DisplayMode : w - " + display.width + " h - " + display.height
-//							+ " refresh - " + display.refreshRate + " color bit - " + display.bitsPerPixel);
-//					if (display.width == w
-//							&& display.height == h
-//							&& (d == null || (d.refreshRate <= display.refreshRate && d.bitsPerPixel <= display.bitsPerPixel))) {
-//						d = display;
-//					}
-//				}
-//				if (d != null) {
-//					cfg.setFullscreenMode(d);
-//				} else {
-//					cfg.setWindowedMode(w, h);
-//				}
-//			} else {
-//				cfg.setWindowedMode(w, h);
-//			}
-//			// vSync
-//			cfg.useVsync(config.isVsync());
-//			cfg.setIdleFPS(config.getMaxFramePerSecond());
-//			cfg.setTitle(VERSION);
-//
-//			cfg.setAudioConfig(config.getAudioDeviceSimultaneousSources(), config.getAudioDeviceBufferSize(), 1);
-//
-//			new Lwjgl3Application(main, cfg);
 		} catch (Throwable e) {
 			e.printStackTrace();
 			Logger.getGlobal().severe(e.getClass().getName() + " : " + e.getMessage());
@@ -288,11 +283,11 @@ public class MainLoader extends Application {
 	}
 
 	public static Graphics.DisplayMode[] getAvailableDisplayMode() {
-		return LwjglApplicationConfiguration.getDisplayModes();
+		return Lwjgl3ApplicationConfiguration.getDisplayModes();
 	}
 
 	public static Graphics.DisplayMode getDesktopDisplayMode() {
-		return LwjglApplicationConfiguration.getDesktopDisplayMode();
+		return Lwjgl3ApplicationConfiguration.getDisplayMode();
 	}
 
 	public static VersionChecker getVersionChecker() {

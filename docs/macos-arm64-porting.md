@@ -25,17 +25,19 @@ The Liberica `javafx` build ships `javafx.*` modules inside the JDK image, so
 `MainLoader extends javafx.application.Application` starts with plain `java -jar`
 and Ant needs no `-lib` (the Dockerfile uses a separate OpenJFX SDK instead).
 
-## Native dependency status (arm64 JVM, upstream 83574048)
+## Native dependency status (arm64 JVM)
 
-| Library (lib/) | macOS natives shipped | arm64 load | Replacement candidate |
+Rows marked "was" show upstream 83574048. Re-check with `mise run probe`.
+
+| Library (lib/) | macOS natives shipped | arm64 load | Notes |
 |---|---|---|---|
-| gdx-natives / gdx.jar | i386, x86_64 | FAIL | libGDX 1.12+ (`gdx-platform` natives-desktop has macos arm64) |
-| gdx-backend-lwjgl (LWJGL 2) | x86_64 | FAIL | `gdx-backend-lwjgl3` + LWJGL 3.3.x `natives-macos-arm64` (LWJGL 2 has no arm64 build) |
-| gdx-freetype-natives | i386, x86_64 | FAIL | `gdx-freetype-platform` matching the libGDX version |
-| gdx-controllers-desktop (OIS) | i386, x86_64 | FAIL | gdx-controllers 2.x (SDL via jamepad) |
-| sqlite-jdbc 3.18 | x86_64 | FAIL | sqlite-jdbc 3.42+ (`Mac/aarch64`) |
-| javacv/ffmpeg (JavaCPP 1.3.3) | x86_64 | FAIL | JavaCV 1.5.9+ with `ffmpeg macosx-arm64` |
-| java-discord-rpc 2.0.1 (bundled JNA) | x86_64 | FAIL | newer JNA + arm64 discord-rpc, or disable on arm64 |
+| gdx 1.14.2 (`gdx-platform` natives-desktop) | x86_64, arm64 | OK | was gdx 1.9.9: i386, x86_64, FAIL |
+| gdx-backend-lwjgl3 1.14.2 + LWJGL 3.3.3 (lwjgl, glfw, opengl, openal, jemalloc, stb) | x86_64, arm64 | OK | was LWJGL 2 (`gdx-backend-lwjgl`): x86_64 only, FAIL. macOS uses GL 3.2 core + GLSL 150 prepend (`MacOSSupport`) |
+| gdx-freetype 1.14.2 (`gdx-freetype-platform`) | x86_64, arm64 | OK | was i386, x86_64, FAIL |
+| gdx-controllers-desktop (OIS) | i386, x86_64 | FAIL | gdx-controllers 2.x (SDL via jamepad), Task 6. The old `Controllers` class looks for `Lwjgl3ControllerManager` and fails game startup until then |
+| sqlite-jdbc 3.53.4.0 | x86_64, aarch64 | OK | was 3.18: x86_64, FAIL |
+| javacv/ffmpeg (JavaCV 1.5.9, FFmpeg 6.0) | x86_64, arm64 | OK | was JavaCPP 1.3.3: x86_64, FAIL |
+| JNA 5.13.0 | x86_64, aarch64 | OK | added before java-discord-rpc. discord-rpc's own native is still x86_64, so Discord RPC init is caught and logged (`Discord RPC unavailable`) |
 | jportaudio (`natives/libjportaudio.dylib`) | universal (x86_64, arm64) | OK | - |
 | JavaFX (launcher) | JDK-provided | OK | - |
 
@@ -52,6 +54,9 @@ JNA is also used directly by `audio/PortAudioAsioDiagnostics.java` (Windows ASIO
 - GLFW must run on the macOS main thread. JavaFX already owns it, so the game
   loop has to start from the JavaFX application thread (`Platform.runLater`)
   instead of relying on `-XstartOnFirstThread`.
+  `MainLoader.main()` does this for direct play (`-s`, `-a`, a BMS path); the
+  launcher's Play button already runs on that thread and hides the launcher
+  window, because `Lwjgl3Application` blocks until the game exits.
 
 ## Reference implementation
 
