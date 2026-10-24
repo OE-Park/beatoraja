@@ -24,7 +24,7 @@ public class NativeProbe {
         probe("gdx-freetype", () -> { new com.badlogic.gdx.utils.SharedLibraryLoader().load("gdx-freetype"); return null; });
         probe("gdx-controllers-desktop", () -> { new com.badlogic.gdx.utils.SharedLibraryLoader().load("gdx-controllers-desktop"); return null; });
         probe("sqlite-jdbc", () -> java.sql.DriverManager.getConnection("jdbc:sqlite::memory:").getMetaData().getDriverVersion());
-        probe("javacv ffmpeg", () -> { org.bytedeco.javacpp.Loader.load(org.bytedeco.javacpp.avutil.class); return null; });
+        probe("javacv ffmpeg", () -> { org.bytedeco.javacpp.Loader.load(org.bytedeco.ffmpeg.global.avutil.class); return null; });
         probe("jportaudio", () -> { System.loadLibrary("jportaudio"); return null; });
         probe("JNA (discord-rpc bundle)", () -> com.sun.jna.Native.POINTER_SIZE);
         probe("javafx toolkit class", () -> Class.forName("javafx.application.Platform").getModule());
