@@ -201,7 +201,11 @@ public final class MainController {
 		sound = new SystemSoundManager(this);
 		
 		if(config.isUseDiscordRPC()) {
-			stateListener.add(new DiscordListener());
+			try {
+				stateListener.add(new DiscordListener());
+			} catch (Throwable e) {
+				Logger.getGlobal().warning("Discord RPC unavailable: " + e);
+			}
 		}
 	}
 

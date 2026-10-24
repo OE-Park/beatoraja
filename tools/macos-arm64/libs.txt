@@ -12,3 +12,4 @@ org.bytedeco:ffmpeg:6.0-1.5.9:macosx-arm64
 org.bytedeco:ffmpeg:6.0-1.5.9:macosx-x86_64
 org.bytedeco:ffmpeg:6.0-1.5.9:windows-x86_64
 org.bytedeco:ffmpeg:6.0-1.5.9:linux-x86_64
+net.java.dev.jna:jna:5.13.0
