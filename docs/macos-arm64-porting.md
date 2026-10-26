@@ -89,6 +89,29 @@ These apply on every OS, not only macOS (libGDX 1.14.2 / LWJGL3 / gdx-controller
   stopped working (gdx-controllers 2.x needs SDL mappings per device).
   The `origin/lwjgl3` branch holds an older in-progress attempt.
 - macOS only offers OpenGL 3.2 core. LWJGL3 needs
+## PHOENIXWAN USB bridge (macOS 26)
+
+On macOS 26 the PHOENIXWAN IIDX controller cannot be read through SDL/Jamepad: its joystick
+interrupt endpoint enumerates halted, macOS never clears the halt, and the OS resets the device
+every 0.65 s, so the game sees it appear and vanish forever. `tools/macos/phoenixwan_bridge.py`
+(run as root) captures the device with libusb, clears the halt itself and forwards the raw 1000 Hz
+HID reports over loopback UDP. `input/UsbBridgeController` turns that stream into a virtual gdx
+`Controller` ("PHOENIXWAN (USB bridge)") appended to the Jamepad list, so the controller-config
+screen, button mapping and analog scratch logic work unchanged. `getMapping()` is null (no d-pad),
+so HAT bindings do nothing on this device.
+
+Run: `sudo python3 tools/macos/phoenixwan_bridge.py`, then start the game with
+`BEATORAJA_USB_BRIDGE=1` (or `-Dbeatoraja.usbbridge=1`). `1`/`true` listens on UDP 27831,
+an integer selects another port, anything else leaves the bridge disabled.
+
+Protocol (daemon -> 127.0.0.1:27831, one datagram per report):
+
+- 12 bytes: ASCII `PW1` + `seq` uint32 little-endian + 5-byte raw report. Wrong magic/length is dropped.
+- `seq` older than the last accepted one (signed 32-bit difference) is dropped; wrap-around is handled.
+- byte0 = turntable X axis 0..255 (wraps as it spins), byte1 = Y axis; both map to `(b - 128) / 127`, clamped to [-1, 1].
+- byte2 | byte3 << 8 = 16 button bits (bit i = button i), byte4 reserved.
+- No packet for 500 ms: all buttons released, last axis values kept, `isConnected()` false until packets resume.
+
   `setOpenGLEmulation(GL30, 3, 2)` and shaders must be GLSL 150 compatible.
 - GLFW must run on the macOS main thread. JavaFX already owns it, so the game
   loop has to start from the JavaFX application thread (`Platform.runLater`)

@@ -36,6 +36,12 @@ public class BMSPlayerInputProcessor {
 	
 	private KeyLogger keylog = new KeyLogger();
 
+	/**
+	 * UDP で HID レポートを受け取る仮想コントローラ (macOS の PHOENIXWAN 用)。
+	 * 環境変数 BEATORAJA_USB_BRIDGE / システムプロパティ beatoraja.usbbridge で有効化する。
+	 */
+	private UsbBridgeController usbbridge;
+
 	public BMSPlayerInputProcessor(Config config, PlayerConfig player) {
 		Resolution resolution = config.getResolution();
 		kbinput = new KeyBoardInputProcesseor(this, player.getMode14().getKeyboardConfig(), resolution);
@@ -49,6 +55,17 @@ public class BMSPlayerInputProcessor {
 				controllers = Controllers.getControllers();
 			} catch (Throwable e) {
 				Logger.getGlobal().warning("Failed to load gamecontrollerdb.txt: " + e);
+			}
+		}
+		final int bridgePort = getUsbBridgePort();
+		if (bridgePort > 0) {
+			try {
+				usbbridge = new UsbBridgeController(bridgePort);
+				Array<Controller> merged = new Array<Controller>(controllers);
+				merged.add(usbbridge);
+				controllers = merged;
+			} catch (Throwable e) {
+				Logger.getGlobal().warning("Failed to start USB bridge controller on port " + bridgePort + ": " + e);
 			}
 		}
 		for (Controller controller : controllers) {
@@ -90,6 +107,29 @@ public class BMSPlayerInputProcessor {
 		devices.add(midiinput);
 		
 		this.analogScroll = config.isAnalogScroll();
+	}
+
+	/**
+	 * @return USB ブリッジの UDP ポート。無効なら 0
+	 */
+	private static int getUsbBridgePort() {
+		String value = System.getProperty("beatoraja.usbbridge");
+		if (value == null || value.isEmpty()) {
+			value = System.getenv("BEATORAJA_USB_BRIDGE");
+		}
+		if (value == null || value.isEmpty()) {
+			return 0;
+		}
+		value = value.trim();
+		if (value.equals("1") || value.equalsIgnoreCase("true")) {
+			return UsbBridgeController.DEFAULT_PORT;
+		}
+		try {
+			final int port = Integer.parseInt(value);
+			return (port > 0 && port < 65536) ? port : 0;
+		} catch (NumberFormatException e) {
+			return 0;
+		}
 	}
 
 	public  static final int KEYSTATE_SIZE = 256;
@@ -526,6 +566,10 @@ public class BMSPlayerInputProcessor {
 
 	public void dispose() {
 		midiinput.close();
+		if (usbbridge != null) {
+			usbbridge.close();
+			usbbridge = null;
+		}
 	}
 	
 	/**
