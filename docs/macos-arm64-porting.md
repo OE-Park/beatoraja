@@ -50,6 +50,13 @@ JNA is also used directly by `audio/PortAudioAsioDiagnostics.java` (Windows ASIO
 `beatoraja-config.command` runs bare `java`, so an arm64 JDK 17 that bundles JavaFX
 (e.g. Liberica Full / "javafx" build) must be first on `PATH`.
 
+Running from a bare checkout (not the release zip) also needs two runtime assets the
+repo does not ship in place: the default skin loads `skin/default/VL-Gothic-Regular.ttf`
+(the repo only tracks `font/VL-Gothic-Regular.ttf`; without the copy every bar title in
+music select is invisible and the log says `Skin Font load failed`), and the difficulty
+table code expects a `table/` directory. `mise run run` copies the font and creates the
+directory before launching.
+
 ## Behaviour changes on Windows/Linux
 
 These apply on every OS, not only macOS (libGDX 1.14.2 / LWJGL3 / gdx-controllers 2.x).
@@ -82,13 +89,6 @@ These apply on every OS, not only macOS (libGDX 1.14.2 / LWJGL3 / gdx-controller
   ~3 s late while the natives are extracted, later runs are unaffected.
 - FFmpeg 6.0 macosx-x86_64 natives need macOS 11+, so Intel Macs on 10.10-10.15 lose BGA video.
 
-## Known pitfalls from upstream history
-
-- PR #730 (libGDX 1.11.0 + LWJGL 3.3.1) was merged then reverted in #732:
-  `build.xml` was not updated, binary jars bloated the repo, and controllers
-  stopped working (gdx-controllers 2.x needs SDL mappings per device).
-  The `origin/lwjgl3` branch holds an older in-progress attempt.
-- macOS only offers OpenGL 3.2 core. LWJGL3 needs
 ## PHOENIXWAN USB bridge (macOS 26)
 
 On macOS 26 the PHOENIXWAN IIDX controller cannot be read through SDL/Jamepad: its joystick
@@ -112,6 +112,13 @@ Protocol (daemon -> 127.0.0.1:27831, one datagram per report):
 - byte2 | byte3 << 8 = 16 button bits (bit i = button i), byte4 reserved.
 - No packet for 500 ms: all buttons released, last axis values kept, `isConnected()` false until packets resume.
 
+## Known pitfalls from upstream history
+
+- PR #730 (libGDX 1.11.0 + LWJGL 3.3.1) was merged then reverted in #732:
+  `build.xml` was not updated, binary jars bloated the repo, and controllers
+  stopped working (gdx-controllers 2.x needs SDL mappings per device).
+  The `origin/lwjgl3` branch holds an older in-progress attempt.
+- macOS only offers OpenGL 3.2 core. LWJGL3 needs
   `setOpenGLEmulation(GL30, 3, 2)` and shaders must be GLSL 150 compatible.
 - GLFW must run on the macOS main thread. JavaFX already owns it, so the game
   loop has to start from the JavaFX application thread (`Platform.runLater`)

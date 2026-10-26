@@ -21,4 +21,9 @@ run = """
 [tasks.run]
 description = "Run beatoraja from the repo root (same flags as beatoraja-config.command)"
 depends = ["build"]
-run = "\"$JAVA_HOME/bin/java\" -Xms1g -Xmx4g -Djava.library.path=./natives -jar build/beatoraja.jar"
+run = """
+# the default skin loads its font from skin/default/, but the repo only tracks font/
+[ -f skin/default/VL-Gothic-Regular.ttf ] || cp font/VL-Gothic-Regular.ttf skin/default/
+mkdir -p table
+"$JAVA_HOME/bin/java" -Xms1g -Xmx4g -Djava.library.path=./natives -jar build/beatoraja.jar
+"""
