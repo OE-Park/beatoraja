@@ -141,6 +141,13 @@ public class FFmpegProcessor implements VideoProcessor {
 
 		private boolean eof = true;
 		private volatile boolean haltRequested;
+		/**
+		 * Set once the grabber is open. Until then the thread is reading the movie bytes or
+		 * letting JavaCPP extract the FFmpeg natives (first run), and an interrupt there turns
+		 * into FileLockInterruptionException / ClosedByInterruptException, which leaves the
+		 * FFmpeg classes uninitialised for the rest of the process.
+		 */
+		private volatile boolean grabberReady;
 
 		private Pixmap pixmap;
 		private byte[] frameRow;
@@ -163,6 +170,7 @@ public class FFmpegProcessor implements VideoProcessor {
 				}
 				if (haltRequested) return;
 				openGrabber();
+				grabberReady = true;
 				Logger.getGlobal()
 						.info("movie decode - fps : " + grabber.getFrameRate() + " format : " + grabber.getFormat()
 								+ " size : " + grabber.getImageWidth() + " x " + grabber.getImageHeight()
@@ -403,7 +411,11 @@ public class FFmpegProcessor implements VideoProcessor {
 			} else if (!haltRequested) {
 				commands.offerLast(com);
 			}
-			interrupt();
+			// Commands queued before the grabber is open are picked up by the first pollFirst();
+			// only interrupt once the thread may be blocked in pollFirst()/sleep().
+			if (grabberReady) {
+				interrupt();
+			}
 		}
 	}
 

@@ -74,6 +74,12 @@ These apply on every OS, not only macOS (libGDX 1.14.2 / LWJGL3 / gdx-controller
   (direct `-s` and launcher Play) is required before releasing to Windows/Linux users.
 - Mouse cursor in play: hidden and locked with `setCursorCatched` after 5 s without movement
   (no `isInsideWindow` check).
+- Movie BGA first run: JavaCPP extracts the FFmpeg natives to `~/.javacpp/cache` lazily, inside
+  `FFmpegProcessor.MovieSeekThread`. `exec()` used to `interrupt()` that thread for every command, so
+  the READY→PLAY transition could break the extraction file lock (`FileLockInterruptionException`) and
+  leave `avformat`/`avcodec` uninitialised for the whole process (every movie black until restart).
+  `exec()` now only interrupts once the grabber is open; the first movie of a fresh install starts
+  ~3 s late while the natives are extracted, later runs are unaffected.
 - FFmpeg 6.0 macosx-x86_64 natives need macOS 11+, so Intel Macs on 10.10-10.15 lose BGA video.
 
 ## Known pitfalls from upstream history
