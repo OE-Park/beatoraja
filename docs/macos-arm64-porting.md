@@ -93,16 +93,22 @@ These apply on every OS, not only macOS (libGDX 1.14.2 / LWJGL3 / gdx-controller
 
 On macOS 26 the PHOENIXWAN IIDX controller cannot be read through SDL/Jamepad: its joystick
 interrupt endpoint enumerates halted, macOS never clears the halt, and the OS resets the device
-every 0.65 s, so the game sees it appear and vanish forever. `tools/macos/phoenixwan_bridge.py`
-(run as root) captures the device with libusb, clears the halt itself and forwards the raw 1000 Hz
-HID reports over loopback UDP. `input/UsbBridgeController` turns that stream into a virtual gdx
+every 0.65 s, so the game sees it appear and vanish forever. `input/PhoenixwanBridge` (a second
+`main` inside the jar, run as root) captures the device with libusb, clears the halt itself and
+forwards the raw 1000 Hz HID reports over loopback UDP. `input/UsbBridgeController` turns that stream into a virtual gdx
 `Controller` ("PHOENIXWAN (USB bridge)") appended to the Jamepad list, so the controller-config
 screen, button mapping and analog scratch logic work unchanged. `getMapping()` is null (no d-pad),
 so HAT bindings do nothing on this device.
 
-Run: `sudo python3 tools/macos/phoenixwan_bridge.py`, then start the game with
-`BEATORAJA_USB_BRIDGE=1` (or `-Dbeatoraja.usbbridge=1`). `1`/`true` listens on UDP 27831,
-an integer selects another port, anything else leaves the bridge disabled.
+Run: `mise run bridge` (= `sudo java -Djava.library.path=./natives -cp build/beatoraja.jar
+bms.player.beatoraja.input.PhoenixwanBridge`, flags `--port N`, `-v`), keep it running, then start the
+game with `BEATORAJA_USB_BRIDGE=1` (or `-Dbeatoraja.usbbridge=1`). `1`/`true` listens on UDP 27831,
+an integer selects another port, anything else leaves the bridge disabled. Root is unavoidable:
+capturing a USB device that already has a kernel driver needs either root or Apple's restricted
+`com.apple.vm.device-access` entitlement. The bridge is a separate process so the game itself never
+runs as root. libusb is bundled as `natives/libusb-1.0.dylib` (libusb 1.0.30 arm64 from Homebrew,
+install name rewritten to `@rpath`, ad-hoc signed; LGPL-2.1, see `natives/LICENSE.libusb`) and
+loaded through JNA; if that copy is missing the system/Homebrew `libusb-1.0` is tried.
 
 Protocol (daemon -> 127.0.0.1:27831, one datagram per report):
 

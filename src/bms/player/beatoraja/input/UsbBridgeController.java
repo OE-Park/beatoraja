@@ -16,7 +16,7 @@ import com.badlogic.gdx.controllers.ControllerPowerLevel;
  * Virtual controller fed by raw HID reports over loopback UDP.
  *
  * On macOS 26 the PHOENIXWAN cannot be read through SDL because the OS keeps
- * resetting the device. A root-level daemon (tools/macos/phoenixwan_bridge.py)
+ * resetting the device. A root-level daemon ({@link PhoenixwanBridge}, `mise run bridge`)
  * captures the USB device with libusb and forwards the 1000 Hz reports to this
  * class, which exposes them through the gdx {@link Controller} interface so the
  * existing controller configuration and scratch logic work unchanged.
