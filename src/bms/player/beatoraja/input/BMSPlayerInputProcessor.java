@@ -3,6 +3,9 @@ package bms.player.beatoraja.input;
 import bms.player.beatoraja.*;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -13,6 +16,7 @@ import bms.player.beatoraja.input.KeyBoardInputProcesseor.ControlKeys;
 
 import com.badlogic.gdx.controllers.Controller;
 import com.badlogic.gdx.controllers.Controllers;
+import com.badlogic.gdx.controllers.desktop.JamepadControllerManager;
 import com.badlogic.gdx.utils.Array;
 
 /**
@@ -32,12 +36,43 @@ public class BMSPlayerInputProcessor {
 	
 	private KeyLogger keylog = new KeyLogger();
 
+	/**
+	 * UDP で HID レポートを受け取る仮想コントローラ (macOS の PHOENIXWAN 用)。
+	 * 環境変数 BEATORAJA_USB_BRIDGE / システムプロパティ beatoraja.usbbridge で有効化する。
+	 */
+	private UsbBridgeController usbbridge;
+
 	public BMSPlayerInputProcessor(Config config, PlayerConfig player) {
 		Resolution resolution = config.getResolution();
 		kbinput = new KeyBoardInputProcesseor(this, player.getMode14().getKeyboardConfig(), resolution);
 		// Gdx.input.setInputProcessor(kbinput);
 		Array<BMControllerInputProcessor> bminput = new Array<BMControllerInputProcessor>();
-		for (Controller controller : Controllers.getControllers()) {
+		Array<Controller> controllers = Controllers.getControllers();
+		Path mappingFile = Paths.get("gamecontrollerdb.txt");
+		if (Files.exists(mappingFile)) {
+			try {
+				JamepadControllerManager.addMappingsFromFile(mappingFile.toString());
+				controllers = Controllers.getControllers();
+			} catch (Throwable e) {
+				Logger.getGlobal().warning("Failed to load gamecontrollerdb.txt: " + e);
+			}
+		}
+		final int bridgePort = getUsbBridgePort();
+		if (bridgePort > 0) {
+			try {
+				usbbridge = new UsbBridgeController(bridgePort);
+				Array<Controller> merged = new Array<Controller>(controllers);
+				merged.add(usbbridge);
+				controllers = merged;
+			} catch (Throwable e) {
+				final String hint = (e instanceof java.net.BindException)
+						? " (udp/127.0.0.1:" + bridgePort + " is already in use: another beatoraja instance?)" : "";
+				Logger.getGlobal().log(java.util.logging.Level.SEVERE,
+						"USB bridge controller requested but could not start on port " + bridgePort + hint
+						+ "; continuing without it", e);
+			}
+		}
+		for (Controller controller : controllers) {
 			Logger.getGlobal().info("コントローラーを検出 : " + controller.getName());
 			// FIXME:前回終了時のModeからコントローラ設定を復元
 			ControllerConfig controllerConfig = Stream.of(player.getMode7().getController())
@@ -76,6 +111,37 @@ public class BMSPlayerInputProcessor {
 		devices.add(midiinput);
 		
 		this.analogScroll = config.isAnalogScroll();
+	}
+
+	/**
+	 * @return USB ブリッジの UDP ポート。無効なら 0
+	 */
+	private static int getUsbBridgePort() {
+		String value = System.getProperty("beatoraja.usbbridge");
+		if (value == null || value.isEmpty()) {
+			value = System.getenv("BEATORAJA_USB_BRIDGE");
+		}
+		if (value == null || value.isEmpty()) {
+			return 0;
+		}
+		value = value.trim();
+		if (value.equals("1") || value.equalsIgnoreCase("true")) {
+			return UsbBridgeController.DEFAULT_PORT;
+		}
+		if (value.equals("0") || value.equalsIgnoreCase("false")) {
+			return 0;
+		}
+		try {
+			final int port = Integer.parseInt(value);
+			if (port > 0 && port < 65536) {
+				return port;
+			}
+		} catch (NumberFormatException e) {
+			// fall through
+		}
+		Logger.getGlobal().warning("Ignoring BEATORAJA_USB_BRIDGE/beatoraja.usbbridge=\"" + value
+				+ "\": expected 1, true or a UDP port 1-65535");
+		return 0;
 	}
 
 	public  static final int KEYSTATE_SIZE = 256;
@@ -512,6 +578,10 @@ public class BMSPlayerInputProcessor {
 
 	public void dispose() {
 		midiinput.close();
+		if (usbbridge != null) {
+			usbbridge.close();
+			usbbridge = null;
+		}
 	}
 	
 	/**

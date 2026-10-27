@@ -2,6 +2,7 @@
 /player/*
 /skin/*
 !/skin/default/
+/skin/default/VL-Gothic-Regular.ttf
 /practice/*
 /screenshot/*
 /table/*
@@ -19,3 +20,4 @@ b.bat
 *.cim
 .idea/
 .DS_Store
+beatoraja_log.xml.lck

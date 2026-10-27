@@ -2,6 +2,7 @@ package bms.player.beatoraja;
 
 import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.logging.Logger;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
@@ -18,6 +19,9 @@ public class ShaderManager {
 				shaders.put(name, shader);
 				return shader;				
 			}
+			// the caller falls back to libGDX's default shader, so this is visible to the user as wrong rendering
+			Logger.getGlobal().severe("Shader compile failed, falling back to the default shader: " + name + "\n" + shader.getLog());
+			shader.dispose();
 		}
 		return shaders.get(name);
 	}

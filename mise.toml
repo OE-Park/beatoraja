@@ -1,0 +1,36 @@
+# macOS arm64 development toolchain.
+# Liberica "javafx" builds bundle JavaFX modules in the JDK image, so the
+# launcher (javafx.application.Application) runs with plain `java -jar`
+# and ant can compile src/bms/player/beatoraja/launcher without -lib.
+[tools]
+java = "liberica-javafx-17.0.21+11"
+ant = "1.10.18"
+
+[tasks.build]
+description = "Build build/beatoraja.jar"
+run = "ant create_run_jar"
+
+[tasks.probe]
+description = "Check which bundled native libraries load on this JVM/arch"
+depends = ["build"]
+run = """
+"$JAVA_HOME/bin/javac" -cp build/beatoraja.jar -d build/probe tools/macos-arm64/NativeProbe.java
+"$JAVA_HOME/bin/java" -Djava.library.path=./natives -cp build/beatoraja.jar:build/probe NativeProbe
+"""
+
+[tasks.run]
+description = "Run beatoraja from the repo root (same flags as beatoraja-config.command)"
+depends = ["build"]
+run = """
+# the default skin loads its font from skin/default/, but the repo only tracks font/
+[ -f skin/default/VL-Gothic-Regular.ttf ] || cp font/VL-Gothic-Regular.ttf skin/default/
+mkdir -p table
+"$JAVA_HOME/bin/java" -Xms1g -Xmx4g -Djava.library.path=./natives -jar build/beatoraja.jar
+"""
+
+[tasks.bridge]
+description = "Run the PHOENIXWAN USB bridge (needs sudo). Keep it running, then `BEATORAJA_USB_BRIDGE=1 mise run run`"
+depends = ["build"]
+run = """
+sudo "$JAVA_HOME/bin/java" -Djava.library.path=./natives -cp build/beatoraja.jar bms.player.beatoraja.input.PhoenixwanBridge "$@"
+"""

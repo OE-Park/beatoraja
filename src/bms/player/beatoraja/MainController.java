@@ -5,7 +5,6 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Logger;
 
-import org.lwjgl.input.Mouse;
 
 import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.*;
@@ -14,7 +13,6 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.*;
-import com.badlogic.gdx.utils.StringBuilder;
 
 import bms.player.beatoraja.AudioConfig.DriverType;
 import bms.player.beatoraja.MainState.MainStateType;
@@ -201,7 +199,12 @@ public final class MainController {
 		sound = new SystemSoundManager(this);
 		
 		if(config.isUseDiscordRPC()) {
-			stateListener.add(new DiscordListener());
+			try {
+				stateListener.add(new DiscordListener());
+			} catch (Throwable e) {
+				Logger.getGlobal().log(java.util.logging.Level.WARNING,
+						"Discord RPC unavailable (disable 'Discord RPC' in the config to silence this)", e);
+			}
 		}
 	}
 
@@ -512,7 +515,7 @@ public final class MainController {
             	input.setMouseMoved(false);
             	mouseMovedTime = time;
 			}
-			Mouse.setGrabbed(current == bmsplayer && time > mouseMovedTime + 5000 && Mouse.isInsideWindow());
+			Gdx.input.setCursorCatched(current == bmsplayer && time > mouseMovedTime + 5000);
 
 			// FPS表示切替
             if (input.isActivated(KeyCommand.SHOW_FPS)) {
