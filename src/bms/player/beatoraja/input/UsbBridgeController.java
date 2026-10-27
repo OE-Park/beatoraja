@@ -34,6 +34,8 @@ public class UsbBridgeController implements Controller {
 	private static final int BUTTON_COUNT = 16;
 	/** Stream is considered lost after this many milliseconds without a packet. */
 	private static final long TIMEOUT_MS = 500;
+	/** Largest accepted jump in sequence numbers (about 1 min at 1000 Hz). */
+	private static final int SEQ_WINDOW = 65536;
 
 	private final int port;
 	private final DatagramSocket socket;
@@ -47,11 +49,15 @@ public class UsbBridgeController implements Controller {
 	private volatile long lastPacketNanos = 0;
 	private int lastSeq = -1;
 	private boolean seqValid = false;
+	private final long startNanos = System.nanoTime();
+	private boolean noStreamWarned = false;
+	/** Warn once if the daemon has not sent anything this long after start-up. */
+	private static final long NO_STREAM_WARN_MS = 5000;
 
 	public UsbBridgeController(int port) throws IOException {
 		this.port = port;
 		socket = new DatagramSocket(port, InetAddress.getLoopbackAddress());
-		socket.setSoTimeout((int) TIMEOUT_MS);
+		socket.setSoTimeout(100); // poll the loss timeout often enough that buttons release within ~TIMEOUT_MS
 		thread = new Thread(this::receiveLoop, "UsbBridgeController-" + port);
 		thread.setDaemon(true);
 		thread.start();
@@ -68,8 +74,12 @@ public class UsbBridgeController implements Controller {
 				checkTimeout();
 				continue;
 			} catch (IOException e) {
+				// the socket is dead: release everything so no button stays held for the rest of the session
+				connected = false;
+				buttons = 0;
+				seqValid = false;
 				if (running) {
-					Logger.getGlobal().warning("USB bridge receive failed: " + e);
+					Logger.getGlobal().warning("USB bridge input stopped (restart the game to recover): " + e);
 				}
 				break;
 			}
@@ -78,8 +88,10 @@ public class UsbBridgeController implements Controller {
 				continue;
 			}
 			final int seq = (buf[3] & 0xff) | (buf[4] & 0xff) << 8 | (buf[5] & 0xff) << 16 | (buf[6] & 0xff) << 24;
-			if (seqValid && seq - lastSeq <= 0) {
-				// older than or equal to the last accepted packet (signed difference handles uint32 wrap)
+			final int delta = seq - lastSeq; // signed difference handles uint32 wrap
+			if (seqValid && (delta <= 0 || delta > SEQ_WINDOW)) {
+				// stale, duplicate, or absurdly far ahead (a stray datagram must not be able to
+				// make the receiver reject the real stream until the loss timeout)
 				checkTimeout();
 				continue;
 			}
@@ -97,6 +109,11 @@ public class UsbBridgeController implements Controller {
 	}
 
 	private void checkTimeout() {
+		if (!seqValid && !noStreamWarned && System.nanoTime() - startNanos > NO_STREAM_WARN_MS * 1_000_000L) {
+			noStreamWarned = true;
+			Logger.getGlobal().warning("no USB bridge packets on udp/127.0.0.1:" + port + " after "
+					+ (NO_STREAM_WARN_MS / 1000) + " s: is `mise run bridge` running?");
+		}
 		if (connected && System.nanoTime() - lastPacketNanos > TIMEOUT_MS * 1_000_000L) {
 			connected = false;
 			buttons = 0;

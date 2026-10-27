@@ -65,7 +65,11 @@ public class BMSPlayerInputProcessor {
 				merged.add(usbbridge);
 				controllers = merged;
 			} catch (Throwable e) {
-				Logger.getGlobal().warning("Failed to start USB bridge controller on port " + bridgePort + ": " + e);
+				final String hint = (e instanceof java.net.BindException)
+						? " (udp/127.0.0.1:" + bridgePort + " is already in use: another beatoraja instance?)" : "";
+				Logger.getGlobal().log(java.util.logging.Level.SEVERE,
+						"USB bridge controller requested but could not start on port " + bridgePort + hint
+						+ "; continuing without it", e);
 			}
 		}
 		for (Controller controller : controllers) {
@@ -124,12 +128,20 @@ public class BMSPlayerInputProcessor {
 		if (value.equals("1") || value.equalsIgnoreCase("true")) {
 			return UsbBridgeController.DEFAULT_PORT;
 		}
-		try {
-			final int port = Integer.parseInt(value);
-			return (port > 0 && port < 65536) ? port : 0;
-		} catch (NumberFormatException e) {
+		if (value.equals("0") || value.equalsIgnoreCase("false")) {
 			return 0;
 		}
+		try {
+			final int port = Integer.parseInt(value);
+			if (port > 0 && port < 65536) {
+				return port;
+			}
+		} catch (NumberFormatException e) {
+			// fall through
+		}
+		Logger.getGlobal().warning("Ignoring BEATORAJA_USB_BRIDGE/beatoraja.usbbridge=\"" + value
+				+ "\": expected 1, true or a UDP port 1-65535");
+		return 0;
 	}
 
 	public  static final int KEYSTATE_SIZE = 256;

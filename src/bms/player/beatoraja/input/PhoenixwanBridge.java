@@ -39,6 +39,11 @@ import com.sun.jna.ptr.PointerByReference;
  *
  * libusb is loaded from natives/libusb-1.0.dylib (bundled, LGPL-2.1, see natives/LICENSE.libusb)
  * or, failing that, from the system / Homebrew library path.
+ *
+ * Security note: this runs as root and loads build/beatoraja.jar and natives/libusb-1.0.dylib from
+ * the checkout, which the login user can write. Anything that can already run code as that user can
+ * therefore gain root the next time the bridge starts. For a shared machine copy the jar and the
+ * dylib to a root-owned directory and run from there; see docs/macos-arm64-porting.md.
  */
 public class PhoenixwanBridge {
 
@@ -78,15 +83,15 @@ public class PhoenixwanBridge {
 	private final DatagramSocket socket;
 	private final InetAddress loopback;
 	private int seq = 0;
-	private Pointer handle;
+	private volatile Pointer handle;
 	private volatile boolean stop = false;
 
 	private PhoenixwanBridge(LibUsb usb, int port, boolean verbose) throws IOException {
 		this.usb = usb;
 		this.port = port;
 		this.verbose = verbose;
-		this.socket = new DatagramSocket();
 		this.loopback = InetAddress.getLoopbackAddress();
+		this.socket = new DatagramSocket(0, loopback); // never bind the wildcard address from a root process
 	}
 
 	private static void log(String msg) {
@@ -110,6 +115,7 @@ public class PhoenixwanBridge {
 	/** Capture the device, clear the halted joystick endpoint, claim the joystick interface. */
 	private boolean attach() {
 		String desc = null;
+		boolean waitingLogged = false;
 		while (!stop) {
 			for (int i = 0; i < DEVICES.length; i++) {
 				handle = usb.libusb_open_device_with_vid_pid(null, (short) DEVICES[i][0], (short) DEVICES[i][1]);
@@ -119,6 +125,10 @@ public class PhoenixwanBridge {
 				}
 			}
 			if (handle != null) break;
+			if (!waitingLogged) {
+				log("waiting for PHOENIXWAN (1ccf:8048 or 034c:0368) to be plugged in...");
+				waitingLogged = true;
+			}
 			sleep(250);
 		}
 		if (handle == null) return false;
@@ -132,6 +142,7 @@ public class PhoenixwanBridge {
 		r = usb.libusb_claim_interface(handle, JOY_INTERFACE);
 		if (r < 0) {
 			log("claim interface " + JOY_INTERFACE + " failed: " + err(r));
+			detach(true); // the device is captured already: hand it back rather than leave it driverless
 			return false;
 		}
 		byte[] st = new byte[2];
@@ -149,7 +160,11 @@ public class PhoenixwanBridge {
 		usb.libusb_release_interface(h, JOY_INTERFACE);
 		if (releaseToMacOS) {
 			int r = usb.libusb_attach_kernel_driver(h, 0);
-			log("released device back to macOS (" + err(r) + ")");
+			if (r == 0) {
+				log("released device back to macOS");
+			} else {
+				log("could not hand the device back to macOS (" + err(r) + "); replug the controller");
+			}
 		}
 		usb.libusb_close(h);
 	}
@@ -162,14 +177,19 @@ public class PhoenixwanBridge {
 		packet[0] = 'P'; packet[1] = 'W'; packet[2] = '1';
 		byte[] last = null;
 		int pipeErrors = 0;
+		int otherErrors = 0;
+		long shortReports = 0;
 		long count = 0;
 		long statAt = System.nanoTime();
 		while (!stop) {
 			int r = usb.libusb_interrupt_transfer(handle, JOY_EP_IN, buf, buf.length, got, 100);
-			if (r == 0) {
-				int n = Math.min(got.getValue(), REPORT_LEN);
+			if (r == 0 && got.getValue() < REPORT_LEN) {
+				// a truncated report would decode as a hard-left turntable (byte0 = 0); drop it
+				shortReports++;
+				if (shortReports == 1) log("short report (" + got.getValue() + " bytes) ignored");
+			} else if (r == 0) {
 				Arrays.fill(packet, 7, packet.length, (byte) 0);
-				System.arraycopy(buf, 0, packet, 7, n);
+				System.arraycopy(buf, 0, packet, 7, REPORT_LEN);
 				seq++;
 				ByteBuffer.wrap(packet, 3, 4).order(ByteOrder.LITTLE_ENDIAN).putInt(seq);
 				try {
@@ -179,6 +199,7 @@ public class PhoenixwanBridge {
 				}
 				count++;
 				pipeErrors = 0;
+				otherErrors = 0;
 				if (verbose) {
 					byte[] rep = Arrays.copyOfRange(packet, 7, packet.length);
 					if (!Arrays.equals(rep, last)) {
@@ -201,7 +222,12 @@ public class PhoenixwanBridge {
 					return;
 				}
 			} else {
-				log("read error: " + err(r));
+				otherErrors++;
+				if (otherErrors == 1) log("read error: " + err(r));
+				if (otherErrors > 100) { // ~5 s of e.g. LIBUSB_ERROR_IO: give the device back and start over
+					log("read keeps failing (" + err(r) + "); re-attaching");
+					return;
+				}
 				sleep(50);
 			}
 			if (System.nanoTime() - statAt >= 10_000_000_000L) {
@@ -213,9 +239,19 @@ public class PhoenixwanBridge {
 	}
 
 	private void run() {
+		final Thread main = Thread.currentThread();
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+			// Let the main loop finish its current (<=100 ms) transfer and release the device itself;
+			// closing the handle from this thread while a transfer is in flight is a use-after-close.
 			stop = true;
-			detach(true);
+			try {
+				main.join(3000);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+			if (handle != null) {
+				detach(true);
+			}
 			log("bye");
 		}));
 		while (!stop) {
@@ -241,7 +277,7 @@ public class PhoenixwanBridge {
 		// 1) bundled copy next to the other natives (works with -Djava.library.path=./natives or from the repo root)
 		String jlp = System.getProperty("java.library.path", "");
 		for (String dir : (jlp + File.pathSeparator + "natives").split(File.pathSeparator)) {
-			if (!dir.isEmpty()) NativeLibrary.addSearchPath("usb-1.0", dir);
+			if (!dir.isEmpty()) NativeLibrary.addSearchPath("usb-1.0", new File(dir).getAbsolutePath());
 		}
 		// 2) fallback: system / Homebrew search path
 		NativeLibrary.addSearchPath("usb-1.0", "/opt/homebrew/lib");
@@ -266,7 +302,16 @@ public class PhoenixwanBridge {
 		for (int i = 0; i < args.length; i++) {
 			switch (args[i]) {
 				case "--port":
-					port = Integer.parseInt(args[++i]);
+					if (i + 1 >= args.length) { usage(); System.exit(2); }
+					try {
+						port = Integer.parseInt(args[++i]);
+					} catch (NumberFormatException e) {
+						port = 0;
+					}
+					if (port < 1 || port > 65535) {
+						System.err.println("--port must be 1..65535");
+						System.exit(2);
+					}
 					break;
 				case "-v":
 				case "--verbose":

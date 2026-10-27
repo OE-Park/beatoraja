@@ -150,18 +150,20 @@ public class MainLoader extends Application {
 	}
 
 	public static void play(Path f, BMSPlayerMode auto, boolean forceExit, Config config, PlayerConfig player, boolean songUpdated) {
-		if(config == null) {
-			config = Config.read();
-		}
-		if(player == null) {
-			player = PlayerConfig.readPlayerConfig(config.getPlayerpath(), config.getPlayername());
-		}
-
+		// The launcher hides its window and disables JavaFX implicit exit before calling this, so any
+		// exception that escapes here leaves an invisible process that never exits. Keep everything
+		// that can throw (config/player read, song database) inside a handler that honours forceExit.
 		SongDatabaseAccessor songdb;
 		try {
+			if(config == null) {
+				config = Config.read();
+			}
+			if(player == null) {
+				player = PlayerConfig.readPlayerConfig(config.getPlayerpath(), config.getPlayername());
+			}
 			songdb = new SongDatabaseAccessorProvider().get(config, player.getId());
 			detectIllegalSongs(songdb, player);
-		} catch (ClassNotFoundException e) {
+		} catch (Throwable e) {
 			e.printStackTrace();
 			Logger.getGlobal().severe("楽曲データベース初期化中の例外:" + e.getMessage());
 			if (forceExit) {

@@ -202,7 +202,8 @@ public final class MainController {
 			try {
 				stateListener.add(new DiscordListener());
 			} catch (Throwable e) {
-				Logger.getGlobal().warning("Discord RPC unavailable: " + e);
+				Logger.getGlobal().log(java.util.logging.Level.WARNING,
+						"Discord RPC unavailable (disable 'Discord RPC' in the config to silence this)", e);
 			}
 		}
 	}

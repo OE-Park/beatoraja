@@ -73,10 +73,12 @@ These apply on every OS, not only macOS (libGDX 1.14.2 / LWJGL3 / gdx-controller
 - Controller refresh: on macOS the state is refreshed once per rendered frame (SDL updates stay on the render
   thread). On other OS the poll-thread interception still runs the Jamepad monitor at the poll rate.
 - Numpad keys: LWJGL3 reports KP_ENTER/ADD/SUBTRACT/MULTIPLY/DIVIDE/DECIMAL as NUMPAD_* keys instead of
-  ENTER/PLUS/MINUS/STAR/SLASH/PERIOD (LWJGL2 aliasing). Numpad Enter no longer acts as Enter, and saved
-  bindings relying on the aliasing need re-assigning.
-- Launcher: Play hides the launcher window. The game loop runs on the JavaFX thread on every OS (GLFW
-  main-thread rule) and JavaFX implicit exit is turned off at that point. The process exits via
+  ENTER/PLUS/MINUS/STAR/SLASH/PERIOD (LWJGL2 aliasing). The Enter *control key* (menus, key config)
+  also accepts NUMPAD_ENTER, but saved play/keyboard bindings that relied on the aliasing need re-assigning.
+- Launcher: Play hides the launcher window. Through the launcher the game loop runs on the JavaFX
+  thread on every OS (it is the Play button's event handler; macOS additionally needs it because of
+  the GLFW main-thread rule). The direct command-line launch (`-a`/`-s` ...) uses the JavaFX thread
+  only on macOS and the main thread elsewhere, as before. JavaFX implicit exit is turned off at that point. The process exits via
   `System.exit` (0 on success, 1 on failure; was -1 with LWJGL2's forceExit). A Windows x64 smoke
   (direct `-s` and launcher Play) is required before releasing to Windows/Linux users.
 - Mouse cursor in play: hidden and locked with `setCursorCatched` after 5 s without movement
@@ -106,7 +108,11 @@ game with `BEATORAJA_USB_BRIDGE=1` (or `-Dbeatoraja.usbbridge=1`). `1`/`true` li
 an integer selects another port, anything else leaves the bridge disabled. Root is unavoidable:
 capturing a USB device that already has a kernel driver needs either root or Apple's restricted
 `com.apple.vm.device-access` entitlement. The bridge is a separate process so the game itself never
-runs as root. libusb is bundled as `natives/libusb-1.0.dylib` (libusb 1.0.30 arm64 from Homebrew,
+runs as root. Security note: `mise run bridge` runs `build/beatoraja.jar` and `natives/libusb-1.0.dylib`
+from the checkout as root, and the login user can write both, so anything that already runs code as
+that user could gain root when the bridge starts. On a shared machine copy the jar and the dylib to a
+root-owned directory (e.g. `/usr/local/libexec/beatoraja-bridge`) and start the bridge from there with
+`-Djava.library.path=<that dir>`. libusb is bundled as `natives/libusb-1.0.dylib` (libusb 1.0.30 arm64 from Homebrew,
 install name rewritten to `@rpath`, ad-hoc signed; LGPL-2.1, see `natives/LICENSE.libusb`) and
 loaded through JNA; if that copy is missing the system/Homebrew `libusb-1.0` is tried.
 

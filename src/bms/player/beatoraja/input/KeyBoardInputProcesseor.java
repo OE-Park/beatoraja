@@ -126,7 +126,9 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 		}
 		
 		for (ControlKeys key : ControlKeys.values()) {
-			final boolean pressed = Gdx.input.isKeyPressed(key.keycode);
+			final boolean pressed = Gdx.input.isKeyPressed(key.keycode)
+					// LWJGL3 reports numpad Enter as NUMPAD_ENTER (LWJGL2 aliased it to ENTER)
+					|| (key == ControlKeys.ENTER && Gdx.input.isKeyPressed(Keys.NUMPAD_ENTER));
 			if (suppressedTextControlKeys[key.keycode]) {
 				if (!pressed) {
 					suppressedTextControlKeys[key.keycode] = false;
@@ -243,7 +245,8 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 	public void setTextInputMode(boolean textmode) {
 		if (this.textmode && !textmode) {
 			for (ControlKeys key : ControlKeys.values()) {
-				if (key.text && Gdx.input.isKeyPressed(key.keycode)) {
+				if (key.text && (Gdx.input.isKeyPressed(key.keycode)
+						|| (key == ControlKeys.ENTER && Gdx.input.isKeyPressed(Keys.NUMPAD_ENTER)))) {
 					suppressedTextControlKeys[key.keycode] = true;
 					keystate[key.keycode] = true;
 					keytime[key.keycode] = Long.MIN_VALUE;

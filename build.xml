@@ -102,6 +102,8 @@
 				<include name="folder/**" />
 				<include name="manual/**" />
 				<include name="natives/**" />
+				<exclude name="natives/libusb-1.0.dylib" />
+				<exclude name="natives/LICENSE.libusb" />
 				<include name="skin/default/**" />
 				<include name="skin/default/bg.jpg" />
 				<include name="beatoraja.l4j.ini" />
@@ -112,6 +114,8 @@
 				<include name="folder/**" />
 				<include name="manual/**" />
 				<include name="natives/**" />
+				<exclude name="natives/libusb-1.0.dylib" />
+				<exclude name="natives/LICENSE.libusb" />
 				<include name="skin/default/**" />
 				<include name="skin/default/bg.jpg" />
 				<include name="beatoraja-config.command" />

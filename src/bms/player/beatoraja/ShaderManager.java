@@ -19,7 +19,8 @@ public class ShaderManager {
 				shaders.put(name, shader);
 				return shader;				
 			}
-			Logger.getGlobal().warning("Shader compile failed: " + name + "\n" + shader.getLog());
+			// the caller falls back to libGDX's default shader, so this is visible to the user as wrong rendering
+			Logger.getGlobal().severe("Shader compile failed, falling back to the default shader: " + name + "\n" + shader.getLog());
 			shader.dispose();
 		}
 		return shaders.get(name);
